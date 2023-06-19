@@ -1,0 +1,136 @@
+#' Tabla de Separación de Medias del Modelo DUNCAN.
+#'
+#' Obtiene la Tabla de Comparacion de Medias (Diferencia de medias) para la Prueba de Rangos Multiples DUNCAN (PRMD).
+#'
+#' @param Respuesta (vector) datos de la variable respuesta.
+#' @param Tratamiento (vector) datos de la variable que representan el tratamientos.
+#' @param s (string) variable que representa la significancia del modelo.
+#' @param rp05 (string) variable que respresenta la razon que deriva de una posibilidad al 5% con ciertos grados de libertad.
+#' @param rp01 (string) variable que respresenta la razon que deriva de una posibilidad al 1% con ciertos grados de libertad.
+#' @param data (\code{data.frame}) Tabla de datos en formato largo con los datos de los tratamientos y de la variable respuesta.
+#' @return Devuelve una tabla en formato \code{data.frame} con los cálculos correspondientes a la diferencia entre medias de las variables respuesta por tratamiento que compete a la Prueba de DUNCAN.
+#' @export
+TabDUN <- function(Respuesta = RESPUESTA Tratamiento, s, rp05, rp01, data) {
+
+## Defino a mis variables como factores
+
+(y <- data [, Respuesta])
+(Trat <- factor(data[,Tratamiento]))
+(a <- nlevels(Trat)) #numero de observaciones por tratamiento
+
+## Calcular el numero de respuestas totales
+
+(n_resp <- length(y))
+
+## Calcular el numero de respuestas por tratamiento
+
+(n_respxtrat <- tapply(y, INDEX = Trat, FUN = length))
+
+(n_respxtrattot <- (n_respxtrat [1]))
+
+##Calcular el numero de tratamientos
+
+(Rep_trat <- unique(Trat[duplicated(Trat)]))
+
+## Suma de respuestas por tratamiento
+
+(sum_respxtrat <- tapply(y, INDEX = Trat, FUN = sum))
+
+(sum_totxtrat <- sum(sum_respxtrat))
+
+## Calcular el promedio de los totales
+
+(prom_Tots <- ((sum_totxtrat)/(n_resp)))
+
+## Calcular el promedio de las respuestas por tratamiento
+
+(prom_Yi <- tapply(y, INDEX = Trat, FUN = mean))
+
+## Suma de el promedio de las repsuestas por tartamiento
+
+(sumprom_respxtrat <- sum(prom_Yi))
+
+## Calcular el promedio del promedio de las respuestas por tratatmiento
+
+(prom_prom <- ((sumprom_respxtrat)/(a)))
+
+### Paso 2: Construir la tabla Anova respecto al modelo de DUNCAN
+
+## Calcular la suma de cuadrados
+
+(FC <- (((sum_totxtrat)^2)/((n_respxtrattot)*(a))))
+
+## Suma de cuadrados total
+
+(SC_tot <- ((sum((y)^2))-FC))
+
+## Suma dde cuadrados por tratamiento
+
+(SC_trat <- (((sum((sum_respxtrat)^2))/(n_respxtrattot))-FC))
+
+## Suma de cuadrados del error
+
+(SC_error <- ((SC_tot)-(SC_trat)))
+
+## Calcular los grados de libertad
+
+(g <- 1)
+
+(glet <- ((a)-(g)))
+
+(gldt_error <- (((a)*((n_respxtrattot)-(g)))))
+
+(gl_totL <- (((a)*(n_respxtrattot))-(g)))
+
+(CMET <- ((SC_trat)/(glet)))
+
+(CME <- ((SC_error)/(gldt_error)))
+
+(Fc <- ((CMET)/(CME)))
+
+## Grados de libertad
+
+(GDL <- (qf(1-s, glet, gldt_error)))
+
+## Calcular el coeficiente de variación
+
+(CV <- (((sqrt(CME))/(prom_prom))*100))
+
+(CV_porciento <- paste(CV, "%"))
+
+## Calcular el error Standard de la media
+
+(Sy <- (sqrt((CME)/(n_respxtrattot))))
+
+#Buscar funcion para los valores de la comparacion multiple DUNCAN
+
+(Rp5_2 <- ((rp05)*(Sy)))
+(Rp5_3 <- ((rp01)*(Sy)))
+
+## Separación de medias para el peso final
+
+(omt_NA <- as.vector(na.omit(prom_Yi)))
+
+(ord_med <- (omt_NA[order(omt_NA, decreasing = TRUE)]))
+(Dif_med <- (outer(ord_med, ord_med, "-")))
+
+(Dif_medord <- unique(as.vector(Dif_med)))
+
+(Dif1_medord <- unique(as.matrix(Dif_med)))
+
+(max_val <- max(Dif1_medord))  # Obtener el valor máximo
+
+(Sig_Med <- paste(max_val, "**"))
+
+tabla <- data.frame('MdlT' = (Dif1_medord),
+                    'Rp_5' = c(Rp5_3, Rp5_2, NA),
+                    'Significancia' = c(Sig_Med, NA, NA),
+                    check.names = FALSE)
+
+rownames(tabla) <- NULL
+DUNCAN <- format(tabla)
+DUNCAN[is.na(tabla)] <- ""
+
+return(DUNCAN)
+
+}
